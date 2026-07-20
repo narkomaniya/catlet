@@ -1,0 +1,100 @@
+using UnityEngine;
+
+[RequireComponent(typeof(Rigidbody2D))]
+[RequireComponent(typeof(CapsuleCollider2D))] 
+public class PlayerController2D : MonoBehaviour
+{
+    [Header("Настройки движения")]
+    public float moveSpeed = 8f;
+    private float horizontalInput;
+    private bool facingRight = true;
+
+    [Header("Настройки прыжка (Пробел, W, Стрелка Вверх)")]
+    public float jumpForce = 12f;
+    public LayerMask groundLayer; 
+    
+    private float jumpBufferTime = 0.1f;
+    private float jumpBufferCounter;
+    private bool isGrounded;
+
+    private Rigidbody2D rb;
+    private CapsuleCollider2D playerCollider;
+
+    void Start()
+    {
+        rb = GetComponent<Rigidbody2D>();
+        playerCollider = GetComponent<CapsuleCollider2D>();
+
+        rb.freezeRotation = true; 
+        rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+    }
+
+    void Update()
+    {
+        // Считываем движение влево/вправо (A/D или Стрелочки влево/вправо)
+        horizontalInput = Input.GetAxisRaw("Horizontal");
+
+        // НОВОЕ: Проверяем сразу ТРИ кнопки (Jump, W, UpArrow)
+        // Символы || означают "ИЛИ"
+        if (Input.GetButtonDown("Jump") || Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow))
+        {
+            jumpBufferCounter = jumpBufferTime;
+        }
+        else
+        {
+            jumpBufferCounter -= Time.deltaTime;
+        }
+
+        // Выполняем прыжок
+        if (jumpBufferCounter > 0 && isGrounded)
+        {
+            rb.velocity = new Vector2(rb.velocity.x, jumpForce);
+            jumpBufferCounter = 0; 
+        }
+
+        Flip();
+    }
+
+    void FixedUpdate()
+    {
+        rb.velocity = new Vector2(horizontalInput * moveSpeed, rb.velocity.y);
+    }
+
+    private void Flip()
+    {
+        if (horizontalInput > 0 && !facingRight || horizontalInput < 0 && facingRight)
+        {
+            facingRight = !facingRight;
+            Vector3 scaler = transform.localScale;
+            scaler.x *= -1;
+            transform.localScale = scaler;
+        }
+    }
+
+    // --- ОБРАБОТКА КОЛЛИЗИЙ ---
+    private void OnCollisionStay2D(Collision2D collision)
+    {
+        if ((groundLayer.value & (1 << collision.gameObject.layer)) > 0)
+        {
+            Bounds bounds = playerCollider.bounds;
+            float rayLength = 0.1f; 
+
+            bool hitLeft = Physics2D.Raycast(new Vector2(bounds.min.x + 0.05f, bounds.min.y), Vector2.down, rayLength, groundLayer);
+            bool hitCenter = Physics2D.Raycast(new Vector2(bounds.center.x, bounds.min.y), Vector2.down, rayLength, groundLayer);
+            bool hitRight = Physics2D.Raycast(new Vector2(bounds.max.x - 0.05f, bounds.min.y), Vector2.down, rayLength, groundLayer);
+
+            if (hitLeft || hitCenter || hitRight)
+            {
+                isGrounded = true;
+            }
+        }
+    }
+
+    private void OnCollisionExit2D(Collision2D collision)
+    {
+        if ((groundLayer.value & (1 << collision.gameObject.layer)) > 0)
+        {
+            isGrounded = false;
+        }
+    }
+}
