@@ -14,7 +14,9 @@ public class PlayerController2D : MonoBehaviour
     private float defaultGravity;
 
     public LayerMask groundLayer; 
-    public Vector2 groundCheckSize = new Vector2(0.6f, 0.1f);
+    // Сделать зону чуть уже персонажа (0.5f), чтобы не цеплять стены по бокам
+    public Vector2 groundCheckSize = new Vector2(0.5f, 0.1f);
+    public float groundCheckOffset = 0.05f; 
     
     public float jumpBufferTime = 0.1f;
     private float jumpBufferCounter;
@@ -33,11 +35,14 @@ public class PlayerController2D : MonoBehaviour
     private CapsuleCollider2D coll;
     private Transform mainCamTransform; 
 
-    void Start()
+    private void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
         coll = GetComponent<CapsuleCollider2D>();
+    }
 
+    void Start()
+    {
         rb.freezeRotation = true; 
         rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         defaultGravity = rb.gravityScale;
@@ -47,12 +52,22 @@ public class PlayerController2D : MonoBehaviour
 
     void Update()
     {
-        horizontalInput = Input.GetAxisRaw("Horizontal");
+        // Ходьба (A / D и Стрелочки)
+        horizontalInput = 0f;
+        if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) 
+        {
+            horizontalInput = 1f;
+        }
+        else if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) 
+        {
+            horizontalInput = -1f;
+        }
 
-        // Фикс бага стены: смещаем коробку чуть ниже ног и делаем ее чуть уже тела
-        Vector2 boxCenter = new Vector2(coll.bounds.center.x, coll.bounds.min.y - (groundCheckSize.y / 2f));
-        isGrounded = Physics2D.OverlapBox(boxCenter, groundCheckSize, 0f, groundLayer);
+        // Фикс бага прыжка: смещаем зону проверки строго НИЖЕ коллайдера и делаем ее уже
+        Vector2 checkCenter = new Vector2(coll.bounds.center.x, coll.bounds.min.y - (groundCheckSize.y / 2f) - groundCheckOffset);
+        isGrounded = Physics2D.OverlapBox(checkCenter, groundCheckSize, 0f, groundLayer);
 
+        // Таймер прыжка при сходе с платформы (Coyote Time)
         if (isGrounded)
         {
             coyoteTimeCounter = coyoteTime;
@@ -62,7 +77,8 @@ public class PlayerController2D : MonoBehaviour
             coyoteTimeCounter -= Time.deltaTime;
         }
 
-        if (Input.GetButtonDown("Jump") || Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow))
+        // Запись нажатия прыжка на Space, W и Стрелку вверх (Jump Buffer)
+        if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow))
         {
             jumpBufferCounter = jumpBufferTime;
         }
@@ -71,6 +87,7 @@ public class PlayerController2D : MonoBehaviour
             jumpBufferCounter -= Time.deltaTime;
         }
 
+        // Физическое совершение прыжка
         if (coyoteTimeCounter > 0f && jumpBufferCounter > 0f)
         {
             rb.velocity = new Vector2(rb.velocity.x, jumpForce);
@@ -78,7 +95,8 @@ public class PlayerController2D : MonoBehaviour
             coyoteTimeCounter = 0f; 
         }
 
-        if ((Input.GetButtonUp("Jump") || Input.GetKeyUp(KeyCode.W) || Input.GetKeyUp(KeyCode.UpArrow)) && rb.velocity.y > 0)
+        // Срезка высоты прыжка при быстром отпускании кнопки
+        if ((Input.GetKeyUp(KeyCode.Space) || Input.GetKeyUp(KeyCode.W) || Input.GetKeyUp(KeyCode.UpArrow)) && rb.velocity.y > 0)
         {
             rb.velocity = new Vector2(rb.velocity.x, rb.velocity.y * jumpCutMultiplier);
             coyoteTimeCounter = 0f;
@@ -91,6 +109,7 @@ public class PlayerController2D : MonoBehaviour
     {
         rb.velocity = new Vector2(horizontalInput * moveSpeed, rb.velocity.y);
 
+        // Ускоренное падение вниз для хорошего ощущения физики
         if (rb.velocity.y < 0)
         {
             rb.gravityScale = defaultGravity * fallGravityMultiplier;
@@ -103,7 +122,6 @@ public class PlayerController2D : MonoBehaviour
 
     void LateUpdate()
     {
-        // Фикс бага камеры: если потеряли камеру, пытаемся найти её снова
         if (mainCamTransform == null)
         {
             FindCamera();
@@ -144,12 +162,12 @@ public class PlayerController2D : MonoBehaviour
 
     private void OnDrawGizmosSelected()
     {
-        if (GetComponent<CapsuleCollider2D>() != null)
+        CapsuleCollider2D c = GetComponent<CapsuleCollider2D>();
+        if (c != null)
         {
             Gizmos.color = new Color(1, 0, 0, 0.5f);
-            CapsuleCollider2D c = GetComponent<CapsuleCollider2D>();
-            Vector2 boxCenter = new Vector2(c.bounds.center.x, c.bounds.min.y - (groundCheckSize.y / 2f));
-            Gizmos.DrawCube(boxCenter, groundCheckSize);
+            Vector2 checkCenter = new Vector2(c.bounds.center.x, c.bounds.min.y - (groundCheckSize.y / 2f) - groundCheckOffset);
+            Gizmos.DrawCube(checkCenter, groundCheckSize);
         }
 
         if (useCameraBounds)
