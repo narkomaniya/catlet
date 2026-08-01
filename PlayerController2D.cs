@@ -24,10 +24,12 @@ public class PlayerController2D : MonoBehaviour
     private float coyoteTimeCounter;
     private bool isGrounded;
 
+    // --- НАСТРОЙКИ КАМЕРЫ ---
     public bool enableCameraFollow = true; 
     public Vector3 cameraOffset = new Vector3(0f, 0f, -10f); 
+    public float cameraSmoothSpeed = 5f; // Плавность камеры, блядь!
 
-    public bool useCameraBounds = true;
+    public bool useCameraBounds = false; // ВЫРУБИЛИ НАХУЙ, чтобы камера всегда летала за тобой!
     public Vector2 minCamPos = new Vector2(-5f, -5f);
     public Vector2 maxCamPos = new Vector2(5f, 5f);
 
@@ -131,13 +133,15 @@ public class PlayerController2D : MonoBehaviour
         {
             Vector3 targetPos = transform.position + cameraOffset;
 
+            // Эта хуйня теперь по умолчанию не срабатывает, так что камера не отвалится!
             if (useCameraBounds)
             {
                 targetPos.x = Mathf.Clamp(targetPos.x, minCamPos.x, maxCamPos.x);
                 targetPos.y = Mathf.Clamp(targetPos.y, minCamPos.y, maxCamPos.y);
             }
 
-            mainCamTransform.position = targetPos;
+            // Плавное слежение за мутантом
+            mainCamTransform.position = Vector3.Lerp(mainCamTransform.position, targetPos, cameraSmoothSpeed * Time.deltaTime);
         }
     }
 
