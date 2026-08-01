@@ -14,7 +14,6 @@ public class PlayerController2D : MonoBehaviour
     private float defaultGravity;
 
     public LayerMask groundLayer; 
-    // Сделать зону чуть уже персонажа (0.5f), чтобы не цеплять стены по бокам
     public Vector2 groundCheckSize = new Vector2(0.5f, 0.1f);
     public float groundCheckOffset = 0.05f; 
     
@@ -27,9 +26,9 @@ public class PlayerController2D : MonoBehaviour
     // --- НАСТРОЙКИ КАМЕРЫ ---
     public bool enableCameraFollow = true; 
     public Vector3 cameraOffset = new Vector3(0f, 0f, -10f); 
-    public float cameraSmoothSpeed = 5f; // Плавность камеры, блядь!
+    public float cameraSmoothSpeed = 5f; // Плавность камеры без дребезга
 
-    public bool useCameraBounds = false; // ВЫРУБИЛИ НАХУЙ, чтобы камера всегда летала за тобой!
+    public bool useCameraBounds = false; 
     public Vector2 minCamPos = new Vector2(-5f, -5f);
     public Vector2 maxCamPos = new Vector2(5f, 5f);
 
@@ -65,11 +64,11 @@ public class PlayerController2D : MonoBehaviour
             horizontalInput = -1f;
         }
 
-        // Фикс бага прыжка: смещаем зону проверки строго НИЖЕ коллайдера и делаем ее уже
+        // Проверка земли
         Vector2 checkCenter = new Vector2(coll.bounds.center.x, coll.bounds.min.y - (groundCheckSize.y / 2f) - groundCheckOffset);
         isGrounded = Physics2D.OverlapBox(checkCenter, groundCheckSize, 0f, groundLayer);
 
-        // Таймер прыжка при сходе с платформы (Coyote Time)
+        // Coyote Time
         if (isGrounded)
         {
             coyoteTimeCounter = coyoteTime;
@@ -79,7 +78,7 @@ public class PlayerController2D : MonoBehaviour
             coyoteTimeCounter -= Time.deltaTime;
         }
 
-        // Запись нажатия прыжка на Space, W и Стрелку вверх (Jump Buffer)
+        // Jump Buffer
         if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow))
         {
             jumpBufferCounter = jumpBufferTime;
@@ -89,7 +88,7 @@ public class PlayerController2D : MonoBehaviour
             jumpBufferCounter -= Time.deltaTime;
         }
 
-        // Физическое совершение прыжка
+        // Прыжок
         if (coyoteTimeCounter > 0f && jumpBufferCounter > 0f)
         {
             rb.velocity = new Vector2(rb.velocity.x, jumpForce);
@@ -97,7 +96,7 @@ public class PlayerController2D : MonoBehaviour
             coyoteTimeCounter = 0f; 
         }
 
-        // Срезка высоты прыжка при быстром отпускании кнопки
+        // Срезка высоты прыжка
         if ((Input.GetKeyUp(KeyCode.Space) || Input.GetKeyUp(KeyCode.W) || Input.GetKeyUp(KeyCode.UpArrow)) && rb.velocity.y > 0)
         {
             rb.velocity = new Vector2(rb.velocity.x, rb.velocity.y * jumpCutMultiplier);
@@ -111,7 +110,7 @@ public class PlayerController2D : MonoBehaviour
     {
         rb.velocity = new Vector2(horizontalInput * moveSpeed, rb.velocity.y);
 
-        // Ускоренное падение вниз для хорошего ощущения физики
+        // Ускоренное падение
         if (rb.velocity.y < 0)
         {
             rb.gravityScale = defaultGravity * fallGravityMultiplier;
@@ -133,15 +132,17 @@ public class PlayerController2D : MonoBehaviour
         {
             Vector3 targetPos = transform.position + cameraOffset;
 
-            // Эта хуйня теперь по умолчанию не срабатывает, так что камера не отвалится!
             if (useCameraBounds)
             {
                 targetPos.x = Mathf.Clamp(targetPos.x, minCamPos.x, maxCamPos.x);
                 targetPos.y = Mathf.Clamp(targetPos.y, minCamPos.y, maxCamPos.y);
             }
 
-            // Плавное слежение за мутантом
-            mainCamTransform.position = Vector3.Lerp(mainCamTransform.position, targetPos, cameraSmoothSpeed * Time.deltaTime);
+            // Плавное слежение без рывков и дребезга
+            Vector3 smoothedPosition = Vector3.Lerp(mainCamTransform.position, targetPos, cameraSmoothSpeed * Time.deltaTime);
+            
+            // Жестко фиксируем Z-координату камеры, чтобы она не улетала вглубь сцены
+            mainCamTransform.position = new Vector3(smoothedPosition.x, smoothedPosition.y, cameraOffset.z);
         }
     }
 
