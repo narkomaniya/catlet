@@ -2,13 +2,13 @@ using UnityEngine;
 
 public class PlatformEnemy : MonoBehaviour
 {
-    public float speed = 2f;
+    public float speed = 3f;
     public float platformCenterX = 29.87f;
-    public float platformHalfWidth = 1.0f;
+    public float platformHalfWidth = 2.0f; // Сделал шире, чтобы не дрожал на месте
     private int direction = 1;
 
     public Transform player;
-    public float aggroRange = 2.5f;
+    public float aggroRange = 5.0f; // Увеличил видимость, чтобы нормально агрился
     public float attackRange = 1.0f;
 
     private Rigidbody2D rb;
