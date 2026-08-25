@@ -1,63 +1,46 @@
 using UnityEngine;
 
-public class SideScrollerEnemyAI : MonoBehaviour
+public class PlatformEnemy : MonoBehaviour
 {
     public float speed = 2f;
-    public float moveDistance = 3f; // Дистанция патруля в стороны от точки спавна
-    private float startX;
+    public float platformCenterX = 29.87f;
+    public float platformHalfWidth = 1.0f;
     private int direction = 1;
 
     public Transform player;
-    public float aggroRange = 5f; // Дистанция, на которой видит игрока
-    public float attackRange = 1.2f; // Дистанция удара
+    public float aggroRange = 2.5f;
+    public float attackRange = 1.0f;
 
     private Rigidbody2D rb;
 
     void Start()
     {
-        startX = transform.position.x;
         rb = GetComponent<Rigidbody2D>();
+        if (rb != null) rb.freezeRotation = true;
     }
 
     void Update()
     {
-        if (player == null) return;
+        if (player == null || rb == null) return;
 
-        float distanceToPlayer = Vector2.Distance(transform.position, player.position);
+        float dist = Vector2.Distance(transform.position, player.position);
 
-        if (distanceToPlayer <= attackRange)
+        if (transform.position.x > platformCenterX + platformHalfWidth) direction = -1;
+        else if (transform.position.x < platformCenterX - platformHalfWidth) direction = 1;
+
+        if (dist <= attackRange)
         {
-            // Ближний бой / атака
-            Attack();
+            rb.velocity = new Vector2(0, rb.velocity.y);
         }
-        else if (distanceToPlayer <= aggroRange)
+        else if (dist <= aggroRange)
         {
-            // Погоня за игроком по оси X (высоту не трогаем, чтобы не летал)
-            float targetX = Mathf.MoveTowards(transform.position.x, player.position.x, speed * Time.deltaTime);
-            transform.position = new Vector3(targetX, transform.position.y, transform.position.z);
-            
-            // Разворачиваем морду в сторону игрока (опционально)
-            if (player.position.x > transform.position.x)
-                direction = 1;
-            else
-                direction = -1;
+            direction = player.position.x > transform.position.x ? 1 : -1;
+            rb.velocity = new Vector2(direction * speed, rb.velocity.y);
         }
         else
         {
-            // Патрулирование туда-сюда по платформе
-            float newX = transform.position.x + direction * speed * Time.deltaTime;
-            transform.position = new Vector3(newX, transform.position.y, transform.position.z);
-
-            // Если отошел слишком далеко от стартовой точки — разворачиваемся
-            if (Mathf.Abs(transform.position.x - startX) >= moveDistance)
-            {
-                direction *= -1;
-            }
+            rb.velocity = new Vector2(direction * speed, rb.velocity.y);
+            if (Mathf.Abs(transform.position.x - platformCenterX) >= platformHalfWidth) direction *= -1;
         }
-    }
-
-    void Attack()
-    {
-        Debug.Log("Враг бьет сбоку!");
     }
 }
