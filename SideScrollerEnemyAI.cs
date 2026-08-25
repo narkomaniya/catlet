@@ -8,7 +8,7 @@ public class PlatformEnemy : MonoBehaviour
     private int direction = 1;
 
     public Transform player;
-    public float aggroRange = 5.0f; // Увеличил видимость, чтобы нормально агрился
+    public float aggroRange = 7.0f; // Увеличил видимость, чтобы нормально агрился
     public float attackRange = 1.0f;
 
     private Rigidbody2D rb;
