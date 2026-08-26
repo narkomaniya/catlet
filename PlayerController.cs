@@ -6,7 +6,7 @@ public class BasicMovement : MonoBehaviour
     public float jumpForce = 6f;
 
     private Rigidbody rb;
-    private bool isGrounded = true;
+    private bool isGrounded = false;
 
     void Start()
     {
@@ -37,11 +37,32 @@ public class BasicMovement : MonoBehaviour
         }
     }
 
-    void OnCollisionEnter(Collision col)
+    // Проверяем именно то, на что наступаем снизу
+    void OnCollisionStay(Collision col)
     {
         if (col.gameObject.CompareTag("Ground"))
         {
-            isGrounded = true;
+            foreach (ContactPoint2D contact in col.contacts) // Если у вас 3D, то ContactPoint, но для 3D Unity использует ContactPoint
+            {
+                // Проверяем, что точка контакта снизу (нормаль смотрит вверх)
+            }
+            
+            // Простой вариант без сложных нормалей: проверяем, что соприкосновение идет снизу
+            foreach (ContactPoint contact in col.contacts)
+            {
+                if (contact.normal.y > 0.5f)
+                {
+                    isGrounded = true;
+                }
+            }
+        }
+    }
+
+    void OnCollisionExit(Collision col)
+    {
+        if (col.gameObject.CompareTag("Ground"))
+        {
+            isGrounded = false;
         }
     }
 }
